@@ -4,7 +4,7 @@
     </a>
 </h2>
 <h2 align="center">
-   NETWORK PROGRAMMING
+   GAME TIK TAC TOE (CARO 3x3)
 </h2>
 <div align="center">
     <p align="center">
