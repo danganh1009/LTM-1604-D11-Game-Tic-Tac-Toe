@@ -1,0 +1,19 @@
+﻿# Java
+/bin/
+/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# history
+game_history.txt
