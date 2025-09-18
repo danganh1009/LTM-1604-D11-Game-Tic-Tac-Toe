@@ -100,6 +100,7 @@
 
 ###  Giao diện Thống kê
 <img src="https://github.com/user-attachments/assets/0a46bfec-8f87-4d59-a593-093b41d5619a" alt="Giao diện Thống kê" width="450" />
+
 ## ⚙️ 4. Các bước cài đặt & Chạy ứng dụng
 
 ### 🛠️ 4.1. Yêu cầu hệ thống
@@ -165,6 +166,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
