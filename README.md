@@ -19,8 +19,6 @@
 
 
 </div>
----
-
 ## 💡1. Tổng quan về hệ thống
 Ứng dụng "Game Caro 3x3" là một trò chơi cờ Caro cổ điển, được phát triển để người chơi có thể thách đấu và thi đấu trực tuyến. Hệ thống được xây dựng theo mô hình **client-server** sử dụng giao thức **TCP**, đảm bảo trải nghiệm chơi mượt mà và đáng tin cậy.
 
@@ -166,6 +164,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
