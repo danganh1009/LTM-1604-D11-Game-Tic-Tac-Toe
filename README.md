@@ -87,19 +87,19 @@
 
 ## 📸 3. Hình ảnh các chức năng
 
-### 1\. Giao diện Đăng nhập
+###  Giao diện Đăng nhập
 <img src="https://github.com/user-attachments/assets/030c3d36-b49c-4a04-9a0a-b1209917c216" alt="Giao diện Đăng nhập" width="450" />
 
-### 2\. Giao diện Bàn cờ 3x3
+###  Giao diện Bàn cờ 3x3
 <img src="https://github.com/user-attachments/assets/b207f28e-d40f-44c0-a936-3b85c669e780" alt="Giao diện Bàn cờ 3x3" width="700" />
 
-### 3\. Giao diện Chiến thắng
+###  Giao diện Chiến thắng
 <img src="https://github.com/user-attachments/assets/c615efd8-5e20-462f-9323-635efc064acd" alt="Giao diện Thắng" width="450" />
 
-### 4\. Giao diện Thất bại
+###  Giao diện Thất bại
 <img src="https://github.com/user-attachments/assets/6a893418-d768-47d7-95bc-2321d239fd01" alt="Giao diện Thua" width="450" />
 
-### 5\. Giao diện Thống kê
+###  Giao diện Thống kê
 <img src="https://github.com/user-attachments/assets/0a46bfec-8f87-4d59-a593-093b41d5619a" alt="Giao diện Thống kê" width="450" />
 ## ⚙️ 4. Các bước cài đặt & Chạy ứng dụng
 
@@ -166,6 +166,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
