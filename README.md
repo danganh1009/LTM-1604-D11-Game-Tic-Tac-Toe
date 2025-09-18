@@ -87,8 +87,6 @@
 
 ## 📸 3. Hình ảnh các chức năng
 
-## 📸 Hình ảnh các chức năng
-
 ### 1\. Giao diện Đăng nhập
 <img src="https://github.com/user-attachments/assets/030c3d36-b49c-4a04-9a0a-b1209917c216" alt="Giao diện Đăng nhập" width="450" />
 
@@ -168,6 +166,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
