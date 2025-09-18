@@ -147,7 +147,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 
 * **Đăng nhập:** Nhập tên người chơi khi khởi động client.
 * **Trận đấu:**
-    * **X** = Người chơi 1 (màu xanh 🔵)
+    * **X** = Người chơi 1 (màu xanh 🟢)
     * **O** = Người chơi 2 (màu đỏ 🔴)
 * **Kết quả:**
     * 🏆 **Thắng:** Khi có 3 ô liên tiếp trên một hàng, cột hoặc đường chéo.
@@ -165,6 +165,7 @@ Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho b�
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
