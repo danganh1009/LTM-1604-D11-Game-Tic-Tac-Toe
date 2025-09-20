@@ -20,7 +20,7 @@
 
 </div>
 
-## 💡1. Tổng quan về hệ thống
+## 💡1. Giới thiệu về hệ thống
 Ứng dụng "Game Caro 3x3" là một trò chơi cờ Caro cổ điển, được phát triển để người chơi có thể thách đấu và thi đấu trực tuyến. Hệ thống được xây dựng theo mô hình **client-server** sử dụng giao thức **TCP**, đảm bảo trải nghiệm chơi mượt mà và đáng tin cậy.
 
 ### 💻 Thành phần chính
@@ -101,71 +101,94 @@
 ###  Giao diện Thống kê
 <img src="https://github.com/user-attachments/assets/0a46bfec-8f87-4d59-a593-093b41d5619a" alt="Giao diện Thống kê" width="450" />
 
-## ⚙️ 4. Các bước cài đặt & Chạy ứng dụng
+# ⚙️ 4. Các bước cài đặt & Chạy ứng dụng
 
-### 🛠️ 4.1. Yêu cầu hệ thống
-
-* **Java Development Kit (JDK):** Phiên bản **Java 9 trở lên** (khuyến nghị **Java 17 LTS**).
-    * *Lưu ý:* Dự án sử dụng `module-info.java`, do đó cần JDK 9+ để biên dịch và chạy.
-* **Môi trường phát triển:** Eclipse IDE.
-* **Hệ điều hành:** Windows, macOS, hoặc Linux.
-
----
-
-### 📥 4.2. Thiết lập dự án trong Eclipse
-
-1.  **Mở Eclipse và Import dự án:**
-    * Mở Eclipse IDE.
-    * Trên thanh menu, chọn **File > Import...**
-    * Trong cửa sổ mới, chọn **General > Existing Projects into Workspace** rồi nhấn **Next**.
-    * Chọn **Browse...** để tìm đến thư mục gốc của dự án và nhấn **Finish**.
-
-2.  **Kiểm tra cấu hình JDK:**
-    * Đảm bảo dự án đã được cấu hình với **JDK 9 trở lên**.
-    * Nhấp chuột phải vào dự án trong **Package Explorer**, chọn **Properties**.
-    * Kiểm tra trong mục **Java Build Path** hoặc **Java Compiler** để đảm bảo đúng phiên bản JDK được sử dụng.
+## 🛠️ 4.1. Yêu cầu hệ thống
+- **Java Development Kit (JDK):** Phiên bản 8 trở lên (khuyến nghị JDK 17/21).  
+- **Hệ điều hành:** Windows, macOS, hoặc Linux.  
+- **Môi trường phát triển:** IDE (IntelliJ IDEA, Eclipse).  
+- **Bộ nhớ:** Tối thiểu 512GB ổ cứng và 16GB RAM.  
 
 ---
 
-### ▶️ 4.3. Chạy ứng dụng
+## 📥 4.2. Các bước cài đặt
 
-Khi chạy bằng Eclipse, IDE sẽ tự động biên dịch mã nguồn cho bạn. Bạn chỉ cần chạy các lớp chính theo thứ tự.
+### 🧰 Bước 1: Chuẩn bị môi trường
+1. **Cài đặt Java**  
+   - Dự án yêu cầu **JDK 8+** (JDK 21 cũng chạy được).  
+   - Kiểm tra bằng lệnh:  
+     ```bash
+     java -version
+     javac -version
+     ```
+   - Đảm bảo cả hai lệnh hiển thị phiên bản **>= 8**.  
 
-1.  **Khởi động Server:**
-    * Trong cửa sổ **Package Explorer**, tìm đến file `GameServer.java` (nằm trong thư mục `src/server`).
-    * Nhấp chuột phải vào file này và chọn **Run As > Java Application**.
-    * Server sẽ khởi động và thông báo sẽ xuất hiện trong cửa sổ **Console** của Eclipse.
+2. **Cấu trúc thư mục dự án**  
+BTLTicTacToe/
+└── src/
+├── client/
+├── server/
 
-2.  **Khởi động Client:**
-    * Trong cửa sổ **Package Explorer**, tìm đến file `GameClient.java` (nằm trong thư mục `src/client`).
-    * Nhấp chuột phải vào file này và chọn **Run As > Java Application**.
-    * Một cửa sổ giao diện của client sẽ bật lên.
-    * Để chơi với nhiều người, bạn có thể lặp lại bước này để mở thêm các cửa sổ client mới.
 
----
+### 🏗 Bước 2: Biên dịch mã nguồn
+Mở terminal và điều hướng đến thư mục dự án:  
+```bash
+cd D:\Download\BTLTicTacToe>
+```
+Biên dịch tất cả file Java:
 
-### 🚀 4.4. Cách chơi (tóm tắt)
+```bash
 
-* **Đăng nhập:** Nhập tên người chơi khi khởi động client.
-* **Trận đấu:**
-    * **X** = Người chơi 1 (màu xanh 🟢)
-    * **O** = Người chơi 2 (màu đỏ 🔴)
-* **Kết quả:**
-    * 🏆 **Thắng:** Khi có 3 ô liên tiếp trên một hàng, cột hoặc đường chéo.
-    * 🤝 **Hòa:** Bàn cờ đầy mà không có ai thắng.
-* **Lịch sử:** Dữ liệu thắng/thua được ghi vào file `player_history.txt`. Client có nút "Thống kê" để xem.
+javac -d bin src/**/*.java
+```
+▶️ Bước 3: Chạy ứng dụng
+Khởi động Server:
 
----
+```bash
+java -cp bin server.CaroServer
+```
+Server chạy trên port mặc định (8000) (có thể thay đổi).
 
-### ⚠️ Lưu ý vận hành
+Giao diện server hiển thị, sẵn sàng nhận kết nối từ client.
 
-* **Port:** Port mặc định là `8000`. Nếu gặp lỗi kết nối, hãy kiểm tra cài đặt tường lửa (firewall).
-* **Quyền ghi:** Đảm bảo thư mục chạy server có quyền ghi để tạo và cập nhật file `player_history.txt`.
+Khởi động Client:
+
+```bash
+
+java -cp bin client.CaroClient
+```
+Mở terminal mới cho mỗi client muốn tham gia.
+
+Nhập tên người dùng khi được yêu cầu (ví dụ: Phóng, Trường, Long).
+
+Client kết nối tới server và hiển thị giao diện Cờ Caro 3x3.
+
+🚀 Cách Chơi
+Đăng nhập: nhập tên người chơi khi mở client.
+
+Xem danh sách online: chọn người chơi khác và bấm Thách Đấu.
+
+Chơi game:
+
+🟩 X = Xanh lá (người chơi 1).
+
+🟥 O = Đỏ (người chơi 2).
+
+🏆 Thắng: khi có 3 ô liên tiếp (ngang / dọc / chéo).
+
+🤝 Hòa: khi bàn cờ đầy mà không ai thắng.
+
+Lịch sử người chơi: mở cửa sổ Thống kê để xem số trận thắng/thua.
+
+Kết thúc: đóng cửa sổ để thoát.
+
+
 
 
 ### 📞 5. Liên hệ
  * ## Email: Nguyenhaidangtb2004.tb@gmail.com
  * ## GitHub: Danganh1009
+
 
 
 
