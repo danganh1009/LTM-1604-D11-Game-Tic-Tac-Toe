@@ -99,7 +99,8 @@
 
 
 ###  Giao diện Bàn cờ 3x3
-<img src="https://github.com/user-attachments/assets/b207f28e-d40f-44c0-a936-3b85c669e780" alt="Giao diện Bàn cờ 3x3" width="700" />
+<img width="450" alt="image" src="https://github.com/user-attachments/assets/2db136d9-231a-4651-ad10-b710af216f4c" />
+
 
 ###  Giao diện Chiến thắng
 <img src="https://github.com/user-attachments/assets/c615efd8-5e20-462f-9323-635efc064acd" alt="Giao diện Thắng" width="450" />
@@ -197,6 +198,7 @@ Kết thúc: đóng cửa sổ để thoát.
 ### 📞 5. Liên hệ
  *  Email: Nguyenhaidangtb2004.tb@gmail.com
  *  GitHub: Danganh1009
+
 
 
 
