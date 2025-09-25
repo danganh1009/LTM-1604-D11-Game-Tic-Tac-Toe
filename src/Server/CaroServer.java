@@ -1,318 +1,74 @@
 package Server;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.time.LocalDateTime;
+import java.sql.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CaroServer {
     private static final int PORT = 8000;
-    private static Socket player1Socket;
-    private static Socket player2Socket;
-    private static PrintWriter out1, out2;
-    private static BufferedReader in1, in2;
-    private static char[][] board = new char[3][3];
-
-    private static BlockingQueue<String> moveQueue = new LinkedBlockingQueue<>();
-    private static volatile boolean running = true;
-    private static volatile boolean p1PlayAgain = false;
-    private static volatile boolean p2PlayAgain = false;
-    private static StringBuilder currentGameMoves = new StringBuilder();
-    private static String p1Name = "P1";
-    private static String p2Name = "P2";
+    private static final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
+    private static volatile int nextGuestId = 1;
 
     public static void main(String[] args) {
-        // Server starting (silent)
+        System.out.println("CaroServer starting on port " + PORT);
+        Db.init();
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            // waiting for player 1
-            player1Socket = serverSocket.accept();
-            out1 = new PrintWriter(player1Socket.getOutputStream(), true);
-            in1 = new BufferedReader(new InputStreamReader(player1Socket.getInputStream()));
-            out1.println("role:X");
-            // player 1 connected
-
-            // waiting for player 2
-            player2Socket = serverSocket.accept();
-            out2 = new PrintWriter(player2Socket.getOutputStream(), true);
-            in2 = new BufferedReader(new InputStreamReader(player2Socket.getInputStream()));
-            out2.println("role:O");
-            // player 2 connected
-
-            // start reader threads
-            Thread r1 = new Thread(() -> readerLoop(in1, 1), "reader-1");
-            Thread r2 = new Thread(() -> readerLoop(in2, 2), "reader-2");
-            r1.start();
-            r2.start();
-            // manage multiple games
-            while (running) {
-                // clear moves for new game
-                currentGameMoves.setLength(0);
-                // keep player names between games
-                gameLoop();
-
-                // after a game ends, wait for both players to request play again
-                // Game ended. Waiting for play_again from both players...
-                p1PlayAgain = false;
-                p2PlayAgain = false;
-                while (running && !(p1PlayAgain && p2PlayAgain)) {
-                    Thread.sleep(200);
-                }
-                if (!running)
-                    break;
-                // Both players requested play again. Starting new game.
+            while (true) {
+                Socket s = serverSocket.accept();
+                ClientHandler h = new ClientHandler(s);
+                new Thread(h, "client-" + h.getId()).start();
             }
-
-            // shutdown
-            running = false;
-            r1.interrupt();
-            r2.interrupt();
-            closeAll();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (InterruptedException ie) {
-            // Server main loop interrupted
         }
     }
 
-    private static void readerLoop(BufferedReader in, int playerId) {
-        try {
-            String line;
-            while (running && (line = in.readLine()) != null) {
-                // received from player (silent)
-                if (line.startsWith("login:")) {
-                    String name = line.substring(6).trim();
-                    if (playerId == 1)
-                        p1Name = name.isEmpty() ? "P1" : name;
-                    else
-                        p2Name = name.isEmpty() ? "P2" : name;
-                    // if both names known, notify each of opponent name
-                    if (p1Name != null && p2Name != null) {
-                        if (out1 != null)
-                            out1.println("opponent:" + p2Name);
-                        if (out2 != null)
-                            out2.println("opponent:" + p1Name);
-                    }
-                } else if (line.startsWith("move:")) {
-                    // record move for history (store row,col)
-                    currentGameMoves.append("P").append(playerId).append(":").append(line.substring(5)).append(";");
-                    moveQueue.put(playerId + ":" + line);
-                } else if (line.equals("play_again")) {
-                    if (playerId == 1)
-                        p1PlayAgain = true;
-                    else
-                        p2PlayAgain = true;
-                    // player requested play again
-                } else if (line.equals("get_stats")) {
-                    // compute stats for this player and send back
-                    String name = (playerId == 1) ? p1Name : p2Name;
-                    String stats = computeStatsForPlayer(name);
-                    if (playerId == 1)
-                        sendToP1("stats:" + stats);
-                    else
-                        sendToP2("stats:" + stats);
-                }
-            }
-        } catch (IOException | InterruptedException e) {
-            System.out.println("Reader for P" + playerId + " exiting: " + e.getMessage());
-        }
-    }
-
-    private static void gameLoop() {
-        resetBoard();
-        sendBoard();
-        // X starts
-        sendToP1("your_turn");
-        sendToP2("wait");
-        int currentPlayer = 1; // 1 -> X; 2 -> O
-
-        while (running) {
-            try {
-                String item = moveQueue.take(); // blocks
-                // item format: "1:move:row,col"
-                String[] parts = item.split(":", 3);
-                int playerId = Integer.parseInt(parts[0]);
-                String payload = parts[1] + ":" + parts[2]; // "move:row,col"
-                if (playerId != currentPlayer) {
-                    // Ignoring move from wrong player
-                    continue;
-                }
-                if (payload.startsWith("move:")) {
-                    String coords = payload.substring(5);
-                    char mark = (playerId == 1) ? 'X' : 'O';
-                    boolean ok = processMove(coords, mark);
-                    if (!ok) {
-                        // Invalid move from player
-                        // notify player and give them back the turn
-                        if (playerId == 1) {
-                            sendToP1("invalid_move");
-                            sendToP1("your_turn");
-                            sendToP2("wait");
-                        } else {
-                            sendToP2("invalid_move");
-                            sendToP2("your_turn");
-                            sendToP1("wait");
-                        }
-                        // Returned turn to player after invalid move
-                        continue;
-                    }
-                    sendBoard();
-                    if (checkWin(mark)) {
-                        if (playerId == 1) {
-                            sendToP1("win");
-                            sendToP2("lose");
-                            appendHistory("P1 wins");
-                        } else {
-                            sendToP2("win");
-                            sendToP1("lose");
-                            appendHistory("P2 wins");
-                        }
-                        break;
-                    } else if (isDraw()) {
-                        sendToP1("draw");
-                        sendToP2("draw");
-                        appendHistory("Draw");
-                        break;
-                    } else {
-                        // swap turn
-                        if (currentPlayer == 1) {
-                            currentPlayer = 2;
-                            sendToP2("your_turn");
-                            sendToP1("wait");
-                            // switched to player 2
-                        } else {
-                            currentPlayer = 1;
-                            sendToP1("your_turn");
-                            sendToP2("wait");
-                            // switched to player 1
-                        }
-                    }
-                }
-            } catch (InterruptedException e) {
-                // Game loop interrupted
-                break;
-            }
-        }
-    }
-
-    private static void resetBoard() {
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                board[i][j] = ' ';
-    }
-
-    private static void sendBoard() {
+    // Broadcast current online usernames with status (name|busy or name|free) to all clients
+    private static void broadcastOnline() {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                sb.append(board[i][j]);
-                if (j < 2)
-                    sb.append("|");
-            }
-            if (i < 2)
-                sb.append(";"); // use ';' to separate rows in a single-line board message
+        sb.append("online:");
+        boolean first = true;
+        for (Map.Entry<String, ClientHandler> e : clients.entrySet()) {
+            if (!first)
+                sb.append(",");
+            ClientHandler h = e.getValue();
+            sb.append(e.getKey()).append("|").append(h.isBusy() ? "busy" : "free");
+            first = false;
         }
-        String boardStr = "board:" + sb.toString();
-        sendToP1(boardStr);
-        sendToP2(boardStr);
-        // print a human-friendly board for server logs (replace ';' with newline)
-        // Sent board to both players (silent)
-    }
-
-    private static void sendToP1(String msg) {
-        if (out1 != null) {
-            out1.println(msg);
-            // sent to P1: (silent)
+        String msg = sb.toString();
+        for (ClientHandler h : clients.values()) {
+            h.send(msg);
         }
     }
-
-    private static void sendToP2(String msg) {
-        if (out2 != null) {
-            out2.println(msg);
-            // sent to P2: (silent)
-        }
-    }
-
-    private static boolean processMove(String move, char mark) {
-        String[] parts = move.split(",");
-        int row = Integer.parseInt(parts[0]);
-        int col = Integer.parseInt(parts[1]);
-        if (row < 0 || row > 2 || col < 0 || col > 2 || board[row][col] != ' ')
-            return false;
-        board[row][col] = mark;
-        // processed move
-        return true;
-    }
-
-    private static boolean checkWin(char mark) {
-        for (int i = 0; i < 3; i++) {
-            if (board[i][0] == mark && board[i][1] == mark && board[i][2] == mark)
-                return true;
-            if (board[0][i] == mark && board[1][i] == mark && board[2][i] == mark)
-                return true;
-        }
-        if (board[0][0] == mark && board[1][1] == mark && board[2][2] == mark)
-            return true;
-        if (board[0][2] == mark && board[1][1] == mark && board[2][0] == mark)
-            return true;
-        return false;
-    }
-
-    private static boolean isDraw() {
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                if (board[i][j] == ' ')
-                    return false;
-        return true;
-    }
-
-    private static void closeAll() {
-        try {
-            if (out1 != null)
-                out1.close();
-            if (out2 != null)
-                out2.close();
-            if (in1 != null)
-                in1.close();
-            if (in2 != null)
-                in2.close();
-            if (player1Socket != null)
-                player1Socket.close();
-            if (player2Socket != null)
-                player2Socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static synchronized void appendHistory(String result) {
-        try (java.io.FileWriter fw = new java.io.FileWriter("game_history.txt", true)) {
-            String entry = java.time.LocalDateTime.now().toString() + " - " + result + " - " + p1Name + " vs " + p2Name
-                    + " - moves:"
-                    + currentGameMoves.toString() + System.lineSeparator();
-            fw.write(entry);
-            System.out.println("Appended history: " + entry);
+    // Append game history line
+    private static synchronized void appendHistory(String entry) {
+        try (FileWriter fw = new FileWriter("game_history.txt", true)) {
+            fw.write(entry + System.lineSeparator());
         } catch (IOException e) {
             System.out.println("Failed to append history: " + e.getMessage());
         }
     }
 
-    // Read game_history.txt and compute wins/losses/draws and win rate for given
-    // player name
+    // Compute stats (file fallback)
     private static String computeStatsForPlayer(String name) {
         int wins = 0, losses = 0, draws = 0;
-        java.io.File f = new java.io.File("game_history.txt");
-        if (!f.exists()) {
+        File f = new File("game_history.txt");
+        if (!f.exists())
             return "wins=0;losses=0;draws=0;rate=0%";
-        }
-        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
-                // expected format: timestamp - RESULT - p1Name vs p2Name - moves:...
-                String[] parts = line.split(" - ", 4);
+                String[] parts = line.split(" - ");
                 if (parts.length < 3)
                     continue;
                 String result = parts[1].trim();
@@ -320,7 +76,7 @@ public class CaroServer {
                 String[] two = names.split(" vs ", 2);
                 String g1 = two.length > 0 ? two[0].trim() : "";
                 String g2 = two.length > 1 ? two[1].trim() : "";
-                if (result.equals("Draw") || result.equalsIgnoreCase("Draw")) {
+                if (result.equalsIgnoreCase("Draw")) {
                     if (name.equals(g1) || name.equals(g2))
                         draws++;
                 } else if (result.equals("P1 wins")) {
@@ -334,7 +90,6 @@ public class CaroServer {
                     else if (name.equals(g1))
                         losses++;
                 } else {
-                    // fallback: try to match result containing player name
                     if (result.contains(name) && result.toLowerCase().contains("wins"))
                         wins++;
                 }
@@ -342,8 +97,423 @@ public class CaroServer {
         } catch (IOException e) {
             return "wins=0;losses=0;draws=0;rate=0%";
         }
-        int played = wins + losses; // exclude draws for win rate
+        int played = wins + losses;
         int rate = played == 0 ? 0 : (int) Math.round((wins * 100.0) / played);
         return "wins=" + wins + ";losses=" + losses + ";draws=" + draws + ";rate=" + rate + "%";
+    }
+
+    // === ClientHandler inner class ===
+    private static class ClientHandler implements Runnable {
+        private final Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+        private String name;
+        private final int id;
+        private ClientHandler opponent;
+        private GameSession session;
+        private volatile boolean busy = false;
+
+        ClientHandler(Socket s) throws IOException {
+            this.socket = s;
+            this.out = new PrintWriter(socket.getOutputStream(), true);
+            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.id = nextGuestId++;
+            this.name = "Guest" + id;
+        }
+
+        int getId() {
+            return id;
+        }
+
+        void send(String msg) {
+            out.println(msg);
+        }
+
+        boolean isBusy() {
+            return busy;
+        }
+
+        @Override
+        public void run() {
+            try {
+                send("welcome:Please send login:<name>");
+                String line;
+                clients.put(name, this);
+                broadcastOnline();
+                while ((line = in.readLine()) != null) {
+                    if (line.startsWith("login:")) {
+                        String newName = line.substring(6).trim();
+                        if (newName.isEmpty())
+                            newName = "Guest" + id;
+                        // rename in clients map
+                        clients.remove(this.name);
+                        this.name = newName;
+                        clients.put(this.name, this);
+                        Db.ensureUser(this.name);
+                        broadcastOnline();
+                    } else if (line.startsWith("get_stats")) {
+                        String stats = Db.computeStatsForPlayerOrFallback(name);
+                        send("stats:" + stats);
+                    } else if (line.startsWith("challenge:")) {
+                        String target = line.substring(10).trim();
+                        ClientHandler t = clients.get(target);
+                        if (t != null && t != this) {
+                            if (this.busy) {
+                                send("error:you_are_busy");
+                                continue;
+                            }
+                            if (t.busy) {
+                                send("error:player_busy");
+                                continue;
+                            }
+                            t.send("invite:" + this.name);
+                        } else {
+                            send("error:player_not_found");
+                        }
+                    } else if (line.startsWith("reject:")) {
+                        String challenger = line.substring(7).trim();
+                        ClientHandler c = clients.get(challenger);
+                        if (c != null && c != this) {
+                            c.send("rejected:" + this.name);
+                        }
+                    } else if (line.startsWith("accept:")) {
+                        String challenger = line.substring(7).trim();
+                        ClientHandler c = clients.get(challenger);
+                        if (c != null && c != this) {
+                            // create session
+                            GameSession gs = new GameSession(c, this);
+                            c.session = gs;
+                            this.session = gs;
+                            c.opponent = this;
+                            this.opponent = c;
+                            c.busy = true;
+                            this.busy = true;
+                            broadcastOnline();
+                            gs.start();
+                        } else {
+                            send("error:challenger_not_found");
+                        }
+                    } else if (line.startsWith("move:")) {
+                        if (session != null)
+                            session.handleMove(this, line.substring(5));
+                    } else if (line.equals("play_again")) {
+                        if (session != null)
+                            session.requestPlayAgain(this);
+                    } else if (line.equals("leave")) {
+                        // player wants to return to lobby / leave session
+                        if (session != null) {
+                            session.handleLeave(this);
+                        } else {
+                            this.busy = false;
+                            broadcastOnline();
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("ClientHandler " + name + " disconnected: " + e.getMessage());
+            } finally {
+                cleanup();
+            }
+        }
+
+        void cleanup() {
+            try {
+                clients.remove(this.name);
+                broadcastOnline();
+                if (opponent != null)
+                    opponent.send("opponent_left:" + this.name);
+                if (socket != null)
+                    socket.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+    }
+
+    // === GameSession inner class ===
+    private static class GameSession {
+        private final ClientHandler p1;
+        private final ClientHandler p2;
+        private final char[][] board = new char[3][3];
+        private volatile int currentPlayer = 1; // 1 -> p1 (X), 2 -> p2 (O)
+        private volatile boolean p1Play = false, p2Play = false;
+        private volatile boolean ended = false; // whether the last game finished
+        private final StringBuilder moves = new StringBuilder();
+
+        GameSession(ClientHandler a, ClientHandler b) {
+            this.p1 = a;
+            this.p2 = b;
+            resetBoard();
+            this.currentPlayer = 1;
+            this.ended = false;
+        }
+
+        private void resetBoard() {
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                    board[i][j] = ' ';
+        }
+
+        void start() {
+            // start (or restart) a round inside this session
+            this.currentPlayer = 1;
+            this.ended = false;
+            this.p1Play = false;
+            this.p2Play = false;
+            resetBoard();
+            // send roles and board
+            p1.send("role:X");
+            p2.send("role:O");
+            p1.send("opponent:" + p2.name);
+            p2.send("opponent:" + p1.name);
+            sendBoard();
+            p1.send("your_turn");
+            p2.send("wait");
+        }
+
+        synchronized void handleMove(ClientHandler from, String payload) {
+            try {
+                if (ended) {
+                    // ignore moves after game end until a restart
+                    from.send("wait");
+                    return;
+                }
+                String[] parts = payload.split(",");
+                int row = Integer.parseInt(parts[0]);
+                int col = Integer.parseInt(parts[1]);
+                char mark = (from == p1) ? 'X' : 'O';
+                int playerId = (from == p1) ? 1 : 2;
+                if (playerId != currentPlayer) {
+                    from.send("wait");
+                    return;
+                }
+                if (row < 0 || row > 2 || col < 0 || col > 2 || board[row][col] != ' ') {
+                    from.send("invalid_move");
+                    from.send("your_turn");
+                    if (from == p1)
+                        p2.send("wait");
+                    else
+                        p1.send("wait");
+                    return;
+                }
+                board[row][col] = mark;
+                moves.append((from == p1 ? "P1" : "P2")).append(":").append(row).append(",").append(col).append(";");
+                sendBoard();
+                if (checkWin(mark)) {
+                    ended = true;
+                    if (from == p1) {
+                        p1.send("win");
+                        p2.send("lose");
+                        String entry = LocalDateTime.now() + " - P1 wins - " + p1.name + " vs " + p2.name + " - moves:" + moves.toString();
+                        appendHistory(entry);
+                        Db.storeMatchResultSafe(p1.name, p2.name, 1, moves.toString());
+                    } else {
+                        p2.send("win");
+                        p1.send("lose");
+                        String entry = LocalDateTime.now() + " - P2 wins - " + p1.name + " vs " + p2.name + " - moves:" + moves.toString();
+                        appendHistory(entry);
+                        Db.storeMatchResultSafe(p1.name, p2.name, 2, moves.toString());
+                    }
+                    // keep session present so play-again will work; do not null session here
+                    return;
+                }
+                if (isDraw()) {
+                    ended = true;
+                    p1.send("draw");
+                    p2.send("draw");
+                    String entry = LocalDateTime.now() + " - Draw - " + p1.name + " vs " + p2.name + " - moves:" + moves.toString();
+                    appendHistory(entry);
+                    Db.storeMatchResultSafe(p1.name, p2.name, 0, moves.toString());
+                    // keep session present so play-again will work
+                    return;
+                }
+                // swap turns
+                if (currentPlayer == 1) {
+                    currentPlayer = 2;
+                    p2.send("your_turn");
+                    p1.send("wait");
+                } else {
+                    currentPlayer = 1;
+                    p1.send("your_turn");
+                    p2.send("wait");
+                }
+            } catch (Exception e) {
+                from.send("invalid_move");
+            }
+        }
+
+        void sendBoard() {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    sb.append(board[i][j]);
+                    if (j < 2)
+                        sb.append("|");
+                }
+                if (i < 2)
+                    sb.append(";");
+            }
+            String msg = "board:" + sb.toString();
+            p1.send(msg);
+            p2.send(msg);
+        }
+
+        boolean checkWin(char mark) {
+            for (int i = 0; i < 3; i++) {
+                if (board[i][0] == mark && board[i][1] == mark && board[i][2] == mark)
+                    return true;
+                if (board[0][i] == mark && board[1][i] == mark && board[2][i] == mark)
+                    return true;
+            }
+            if (board[0][0] == mark && board[1][1] == mark && board[2][2] == mark)
+                return true;
+            if (board[0][2] == mark && board[1][1] == mark && board[2][0] == mark)
+                return true;
+            return false;
+        }
+
+        boolean isDraw() {
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                    if (board[i][j] == ' ')
+                        return false;
+            return true;
+        }
+
+        synchronized void requestPlayAgain(ClientHandler who) {
+            // mark who requested rematch
+            if (who == p1)
+                p1Play = true;
+            else
+                p2Play = true;
+
+            // if both requested, restart
+            if (p1Play && p2Play) {
+                moves.setLength(0);
+                p1Play = false;
+                p2Play = false;
+                // reset and start a fresh round
+                resetBoard();
+                currentPlayer = 1;
+                ended = false;
+                start();
+            } else {
+                // inform the other side that opponent wants rematch (optional)
+                if (who == p1) p2.send("opponent_wants_rematch");
+                else p1.send("opponent_wants_rematch");
+            }
+        }
+
+        synchronized void handleLeave(ClientHandler who) {
+            ClientHandler other = (who == p1) ? p2 : p1;
+            try {
+                // notify other
+                if (other != null) {
+                    other.send("opponent_left:" + who.name);
+                    // clear other's session and opponent, and mark free
+                    other.session = null;
+                    other.opponent = null;
+                    other.busy = false;
+                }
+                // clear who as well
+                who.session = null;
+                who.opponent = null;
+                who.busy = false;
+                // broadcast updates
+                broadcastOnline();
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+    }
+
+    // === Simple DB helper (JDBC) ===
+    static final class Db {
+        private static final String ENV_URL = System.getenv("DB_URL");
+        private static final String ENV_USER = System.getenv("DB_USER");
+        private static final String ENV_PASS = System.getenv("DB_PASS");
+
+        static void init() {
+            if (!isConfigured()) return;
+            try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
+                st.executeUpdate("CREATE TABLE IF NOT EXISTS users (\n" +
+                        "  id INT AUTO_INCREMENT PRIMARY KEY,\n" +
+                        "  username VARCHAR(100) NOT NULL UNIQUE\n" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                st.executeUpdate("CREATE TABLE IF NOT EXISTS matches (\n" +
+                        "  id INT AUTO_INCREMENT PRIMARY KEY,\n" +
+                        "  p1 VARCHAR(100) NOT NULL,\n" +
+                        "  p2 VARCHAR(100) NOT NULL,\n" +
+                        "  result TINYINT NOT NULL, -- 1=P1 win, 2=P2 win, 0=draw\n" +
+                        "  moves TEXT,\n" +
+                        "  played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n" +
+                        "  INDEX(p1), INDEX(p2)\n" +
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            } catch (Exception e) {
+                System.out.println("DB init skipped/failed: " + e.getMessage());
+            }
+        }
+
+        static boolean isConfigured() {
+            return ENV_URL != null && !ENV_URL.isEmpty();
+        }
+
+        static Connection getConnection() throws SQLException {
+            return DriverManager.getConnection(ENV_URL, ENV_USER, ENV_PASS);
+        }
+
+        static void ensureUser(String username) {
+            if (!isConfigured()) return;
+            String sql = "INSERT IGNORE INTO users(username) VALUES (?)";
+            try (Connection c = getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.setString(1, username);
+                ps.executeUpdate();
+            } catch (Exception e) {
+                System.out.println("ensureUser failed: " + e.getMessage());
+            }
+        }
+
+        static void storeMatchResultSafe(String p1, String p2, int result, String moves) {
+            if (!isConfigured()) return;
+            String sql = "INSERT INTO matches(p1,p2,result,moves) VALUES (?,?,?,?)";
+            try (Connection c = getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.setString(1, p1);
+                ps.setString(2, p2);
+                ps.setInt(3, result);
+                ps.setString(4, moves);
+                ps.executeUpdate();
+                ensureUser(p1);
+                ensureUser(p2);
+            } catch (Exception e) {
+                System.out.println("storeMatchResult failed: " + e.getMessage());
+            }
+        }
+
+        static String computeStatsForPlayerOrFallback(String name) {
+            if (isConfigured()) {
+                try (Connection c = getConnection()) {
+                    int wins = count(c, "SELECT COUNT(*) FROM matches WHERE (p1=? AND result=1) OR (p2=? AND result=2)", name, name);
+                    int losses = count(c, "SELECT COUNT(*) FROM matches WHERE (p1=? AND result=2) OR (p2=? AND result=1)", name, name);
+                    int draws = count(c, "SELECT COUNT(*) FROM matches WHERE (p1=? OR p2=?) AND result=0", name, name);
+                    int played = wins + losses;
+                    int rate = played == 0 ? 0 : (int)Math.round((wins * 100.0) / played);
+                    return "wins=" + wins + ";losses=" + losses + ";draws=" + draws + ";rate=" + rate + "%";
+                } catch (Exception e) {
+                    System.out.println("computeStats DB failed, fallback to file: " + e.getMessage());
+                }
+            }
+            return computeStatsForPlayer(name);
+        }
+
+        private static int count(Connection c, String sql, String a, String b) throws SQLException {
+            try (PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.setString(1, a);
+                ps.setString(2, b);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) return rs.getInt(1);
+                }
+            }
+            return 0;
+        }
     }
 }
