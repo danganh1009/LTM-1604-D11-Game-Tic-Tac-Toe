@@ -38,6 +38,8 @@
     * Đăng nhập bằng tên.
     * Xem danh sách người chơi trực tuyến.
     * Gửi và nhận lời mời thách đấu.
+    * Chơi với máy
+    * Chơi trực tuyến với người ngẫu nhiên
     * Hiển thị bàn cờ 3x3 và cho phép chơi theo thời gian thực.
     * Nhận thông báo kết quả ngay lập tức trên màn hình.
     * Xem lịch sử thi đấu và làm mới bàn cờ.
@@ -88,6 +90,13 @@
 
 ###  Giao diện Đăng nhập
 <img src="https://github.com/user-attachments/assets/030c3d36-b49c-4a04-9a0a-b1209917c216" alt="Giao diện Đăng nhập" width="450" />
+
+### Giao diện của game
+<img width="450"  alt="image" src="https://github.com/user-attachments/assets/a99a6824-9e6f-4f46-82d1-b4ba6a1da1fd" />
+
+### Giao diện mời người chơi
+<img width="450" alt="image" src="https://github.com/user-attachments/assets/464589dd-14d8-4271-a5e4-3c882218dcda" />
+
 
 ###  Giao diện Bàn cờ 3x3
 <img src="https://github.com/user-attachments/assets/b207f28e-d40f-44c0-a936-3b85c669e780" alt="Giao diện Bàn cờ 3x3" width="700" />
@@ -188,6 +197,7 @@ Kết thúc: đóng cửa sổ để thoát.
 ### 📞 5. Liên hệ
  *  Email: Nguyenhaidangtb2004.tb@gmail.com
  *  GitHub: Danganh1009
+
 
 
 
