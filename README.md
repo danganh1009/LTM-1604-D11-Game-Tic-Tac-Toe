@@ -196,8 +196,12 @@ Kết thúc: đóng cửa sổ để thoát.
 
 
 ### 📞 5. Liên hệ
+ * Nguyễn Hải Đăng
+ * Lớp: CNTT 16-04
+ * Trường Đại học Đại Nam
  *  Email: Nguyenhaidangtb2004.tb@gmail.com
  *  GitHub: Danganh1009
+
 
 
 
