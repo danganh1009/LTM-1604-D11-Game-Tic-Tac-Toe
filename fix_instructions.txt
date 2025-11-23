@@ -1,0 +1,34 @@
+// Lỗi trong việc thay thế chuỗi, hãy thử cách khác
+Để sửa lỗi này, bạn cần:
+
+1. Mở file CaroClient.java
+2. Tìm đoạn code xử lý sự kiện của playAgainButton
+3. Thay thế đoạn code cũ bằng đoạn code mới:
+
+```java
+playAgainButton.addActionListener(e -> {
+    if (out != null && !offlineMode) {
+        out.println("play_again");
+        playAgainButton.setEnabled(false);
+        statusLabel.setText("Đã gửi yêu cầu chơi lại, chờ đối thủ...");
+    } else if (offlineMode) {
+        restartOfflineGame();
+    }
+});
+```
+
+4. Đảm bảo rằng phương thức restartOfflineGame() đã được thêm vào class:
+
+```java
+private void restartOfflineGame() {
+    clearBoard();
+    myMark = 'X';
+    myTurn = true;
+    gameOver = false;
+    statusLabel.setText("Lượt của bạn! (Bạn là X, máy là O)");
+    playAgainButton.setVisible(false);
+    backToLobbyButton.setVisible(false);
+    aiThinking = false;
+    updateButtonsEnabled();
+}
+```

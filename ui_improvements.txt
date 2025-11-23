@@ -1,0 +1,107 @@
+Hướng dẫn cải thiện giao diện Caro:
+
+1. Tạo class UIEffects.java với các hiệu ứng:
+- Gradient cho buttons và panels
+- Hiệu ứng hover cho buttons
+- Animated borders
+- Text fields với hiệu ứng focus
+- Hiệu ứng shine cho ô thắng
+
+2. Cập nhật giao diện đăng nhập:
+- Thêm gradient background
+- Tăng padding và margin
+- Thêm hiệu ứng cho các input fields
+- Thêm animation cho border tiêu đề
+- Cải thiện layout với BoxLayout
+- Thêm icons và màu sắc đẹp hơn
+
+3. Cập nhật giao diện bàn cờ:
+- Thêm gradient background
+- Bo tròn các ô cờ
+- Thêm hiệu ứng hover cho các ô
+- Thêm animation khi đánh
+- Thêm hiệu ứng shine cho các ô thắng
+- Cải thiện layout và spacing
+
+4. Xóa các phương thức không sử dụng:
+- styleButton()
+- loadSavedUsername()
+- loadSavedPassword()
+
+5. Các hiệu ứng thêm:
+- Hiệu ứng pulsing cho nút "Chơi lại"
+- Hiệu ứng fade in/out cho thông báo
+- Hiệu ứng slide cho chuyển đổi màn hình
+- Animation cho X/O khi đánh
+
+Chi tiết thay đổi trong code:
+
+```java
+// 1. Trong phương thức makeMove(), thêm hiệu ứng khi đánh:
+if (checkWin(myMark)) {
+    // Thêm hiệu ứng shine cho các ô thắng
+    for (Point p : getWinningCells(myMark)) {
+        UIEffects.addWinningEffect(buttons[p.x][p.y]);
+    }
+    statusLabel.setText("Bạn thắng!");
+    gameOver = true;
+    // ...
+}
+
+// 2. Thêm hiệu ứng cho status label:
+private void updateStatus(String text) {
+    Timer fadeTimer = new Timer(50, new ActionListener() {
+        float alpha = 1.0f;
+        boolean fading = true;
+        
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (fading) {
+                alpha -= 0.1f;
+                if (alpha <= 0) {
+                    alpha = 0;
+                    fading = false;
+                    statusLabel.setText(text);
+                }
+            } else {
+                alpha += 0.1f;
+                if (alpha >= 1) {
+                    alpha = 1;
+                    ((Timer)e.getSource()).stop();
+                }
+            }
+            statusLabel.setForeground(new Color(25, 25, 112, (int)(alpha * 255)));
+        }
+    });
+    fadeTimer.start();
+}
+
+// 3. Cải thiện giao diện nút trong game:
+private JButton createGameButton(String text, Color color) {
+    JButton button = UIEffects.createGradientButton(text, color, color.darker());
+    button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    button.setForeground(Color.WHITE);
+    UIEffects.addHoverEffect(button);
+    return button;
+}
+
+// 4. Thêm hiệu ứng pulsing cho nút "Chơi lại":
+private void addPulsingEffect(JButton button) {
+    Timer pulseTimer = new Timer(1000, e -> {
+        button.setFont(button.getFont().deriveFont(16f));
+        Timer shrinkTimer = new Timer(100, e2 -> {
+            button.setFont(button.getFont().deriveFont(14f));
+            ((Timer)e2.getSource()).stop();
+        });
+        shrinkTimer.start();
+    });
+    pulseTimer.start();
+}
+```
+
+Để áp dụng các thay đổi:
+1. Copy class UIEffects.java vào package Client
+2. Cập nhật giao diện đăng nhập theo hướng dẫn
+3. Cập nhật giao diện bàn cờ với các hiệu ứng mới
+4. Thêm các hiệu ứng animation vào các sự kiện tương ứng
+5. Xóa các phương thức không sử dụng

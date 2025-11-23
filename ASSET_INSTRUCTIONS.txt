@@ -1,0 +1,17 @@
+Place the attached banner image file (from the editor/attachment) into one of these locations and name it `login_banner.png`:
+
+1) Recommended (project assets):
+   assets/login_banner.png
+
+2) For development (source folder used by IDE):
+   src/Client/images/login_banner.png
+   or
+   src/Client/resources/login_banner.png
+
+3) Classpath resource (if you package resources into the jar):
+   put the file under `resources/assets/login_banner.png` and access it as `/assets/login_banner.png`.
+
+Notes:
+- The login dialog will try these locations in order and will scale the image to fit the dialog.
+- After placing the image, rebuild/run the client to see the banner in the login/register dialog.
+- If you want me to add the binary into the repo, upload the image file here or let me know and I will add it (I cannot create binary files from the attachment automatically).
